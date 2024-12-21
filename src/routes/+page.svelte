@@ -1,41 +1,19 @@
 <script lang="ts">
-	import { invoke } from '@tauri-apps/api/core';
-	import { Button } from '$lib/components/ui/button';
 	import { Command } from '@tauri-apps/plugin-shell';
+	import { type Monitor, monitorSchema } from '$lib/monitors';
+	import MonitorsDisplay from '$lib/components/MonitorsDisplay.svelte';
 
-	let name = $state('');
-	let greetMsg = $state('');
+	let monitors = $state<Monitor[]>();
 
-	async function greet(event: Event) {
-		event.preventDefault();
-
-		let result = await Command.create('hyprctl', ['monitors']).execute();
-		console.log(result);
-
-		// Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-		greetMsg = await invoke('greet', { name });
-	}
+	Command.create('hyprctl', ['monitors', '-j'])
+		.execute()
+		.then((res) => {
+			monitors = monitorSchema.array().parse(JSON.parse(res.stdout));
+		});
 </script>
 
-<main class="container">
-	<h1>Welcome to Tauri + Svelte</h1>
+<main class="mx-auto max-w-screen-md px-4">
+	<MonitorsDisplay monitors={monitors ?? []} />
 
-	<div class="row">
-		<a href="https://vitejs.dev" target="_blank">
-			<img src="/vite.svg" class="logo vite" alt="Vite Logo" />
-		</a>
-		<a href="https://tauri.app" target="_blank">
-			<img src="/tauri.svg" class="logo tauri" alt="Tauri Logo" />
-		</a>
-		<a href="https://kit.svelte.dev" target="_blank">
-			<img src="/svelte.svg" class="logo svelte-kit" alt="SvelteKit Logo" />
-		</a>
-	</div>
-	<p>Click on the Tauri, Vite, and SvelteKit logos to learn more.</p>
-
-	<form class="row" onsubmit={greet}>
-		<input id="greet-input" placeholder="Enter a name..." bind:value={name} />
-		<Button type="submit">Greet</Button>
-	</form>
-	<p>{greetMsg}</p>
+	<pre>{JSON.stringify(monitors, null, 2)}</pre>
 </main>
