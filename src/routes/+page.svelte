@@ -1,12 +1,17 @@
 <script lang="ts">
   import { invoke } from "@tauri-apps/api/core";
   import { Button } from "$lib/components/ui/button";
+  import { Command } from '@tauri-apps/plugin-shell';
 
   let name = $state("");
   let greetMsg = $state("");
 
   async function greet(event: Event) {
     event.preventDefault();
+
+    let result = await Command.create('hyprctl', ["monitors"]).execute();
+    console.log(result);
+
     // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
     greetMsg = await invoke("greet", { name });
   }

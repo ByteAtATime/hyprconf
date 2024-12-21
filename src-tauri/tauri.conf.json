@@ -18,7 +18,26 @@
       }
     ],
     "security": {
-      "csp": null
+      "csp": null,
+      "capabilities": [
+        {
+          "identifier": "hyprctl",
+          "description": "This capability is required for the app to interface with Hyprland.",
+          "windows": ["main"],
+          "permissions": [
+            {
+              "identifier": "shell:allow-execute",
+              "allow": [
+                {
+                  "name": "hyprctl",
+                  "cmd": "hyprctl",
+                  "args": true
+                }
+              ]
+            }
+          ]
+        }
+      ]
     }
   },
   "bundle": {
