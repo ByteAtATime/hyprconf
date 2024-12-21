@@ -11,8 +11,6 @@
 	let container: HTMLDivElement | null = $state(null);
 	let containerRect = $state({ width: 0, height: 0 });
 
-	$inspect(containerRect);
-
 	onMount(() => {
 		if (!container) return;
 
