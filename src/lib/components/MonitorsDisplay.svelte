@@ -5,9 +5,10 @@
 
 	type Props = {
 		monitors: Monitor[];
+		selectedMonitor?: Monitor;
 	};
 
-	const { monitors }: Props = $props();
+	let { monitors, selectedMonitor = $bindable() }: Props = $props();
 	let container: HTMLDivElement | null = $state(null);
 	let containerRect = $state({ width: 0, height: 0 });
 
@@ -22,6 +23,10 @@
 		resizeObserver.observe(container);
 		return () => resizeObserver.disconnect();
 	});
+
+	function handleMonitorClick(monitor: Monitor) {
+		selectedMonitor = monitor;
+	}
 
 	function getMonitorDimensions(monitor: Monitor) {
 		const isRotated = monitor.transform % 2 === 1;
@@ -72,13 +77,19 @@
 	{#each monitors as monitor}
 		{@const dims = getMonitorDimensions(monitor)}
 		<Card.Root
-			class="absolute rounded"
+			class="absolute cursor-pointer rounded transition-all duration-200 {selectedMonitor ===
+			monitor
+				? 'ring-2 ring-primary'
+				: 'hover:ring-2 hover:ring-primary/50'}"
 			style="
         left: {((monitor.x * displayScale + offsetX) / containerRect.width) * 100}%;
         top: {((monitor.y * displayScale + offsetY) / containerRect.height) * 100}%;
         width: {((dims.width * displayScale) / containerRect.width) * 100}%;
         height: {((dims.height * displayScale) / containerRect.height) * 100}%;
       "
+			onclick={() => handleMonitorClick(monitor)}
+			role="button"
+			tabindex={0}
 		>
 			<Card.Header class="space-y-0 p-3">
 				<Card.Title class="text-lg">{monitor.name}</Card.Title>
