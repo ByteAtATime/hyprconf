@@ -6,14 +6,17 @@
 	import { Button } from '$lib/components/ui/button';
 	import * as Select from '$lib/components/ui/select';
 	import * as Tabs from '$lib/components/ui/tabs';
+	import * as Alert from '$lib/components/ui/alert';
 	import { Switch } from '$lib/components/ui/switch';
-	import { Settings2, Info } from 'lucide-svelte';
+	import { Settings2, Info, TriangleAlert } from 'lucide-svelte';
+	import { Command } from '@tauri-apps/plugin-shell';
 
 	type Props = {
 		monitor: Monitor;
+		updateMonitors: () => Promise<void>;
 	};
 
-	const { monitor }: Props = $props();
+	const { monitor, updateMonitors }: Props = $props();
 
 	let width = $state(monitor.width);
 	let height = $state(monitor.height);
@@ -39,6 +42,23 @@
 		2: '180° Rotation',
 		3: '270° Rotation'
 	};
+
+	const revertChanges = () => {
+		width = monitor.width;
+		height = monitor.height;
+		refreshRate = monitor.refreshRate;
+		scales = [monitor.scale];
+		transformRotation = monitor.transform & 0b11;
+		transformFlip = monitor.transform & 0b100;
+	};
+
+	const applyChanges = async () => {
+		const transform = transformRotation | transformFlip;
+		const value = `${monitor.name},${width}x${height}@${refreshRate.toFixed(2)},${monitor.x}x${monitor.y},${scale},transform,${transform}`;
+		await Command.create('hyprctl', ['keyword', 'monitor', value]).execute();
+
+		await updateMonitors();
+	};
 </script>
 
 <div class="space-y-6">
@@ -46,7 +66,7 @@
 		<h2 class="text-2xl font-semibold leading-none tracking-tight">{monitor.name}</h2>
 		<div class="flex flex-col items-end">
 			<span class="text-sm text-muted-foreground">
-				{width}x{height} @ {refreshRate}Hz
+				{monitor.width}x{monitor.height} @ {monitor.refreshRate}Hz
 			</span>
 			<span class="text-sm text-muted-foreground">
 				{monitor.description}
@@ -78,7 +98,15 @@
 							<div class="grid grid-cols-2 gap-6">
 								<div class="space-y-2">
 									<Label class="text-sm font-medium">Resolution</Label>
-									<Select.Root type="single" value="{width}x{height}">
+									<Select.Root
+										type="single"
+										value="{width}x{height}"
+										onValueChange={(res) => {
+											const [w, h] = res.split('x').map(Number);
+											width = w;
+											height = h;
+										}}
+									>
 										<Select.Trigger class="w-full">
 											<span class="flex items-center gap-2">
 												{width}x{height}
@@ -94,7 +122,11 @@
 
 								<div class="space-y-2">
 									<Label class="text-sm font-medium">Refresh Rate</Label>
-									<Select.Root type="single" value={refreshRate.toString()}>
+									<Select.Root
+										type="single"
+										value={refreshRate.toString()}
+										onValueChange={(rate) => (refreshRate = parseFloat(rate))}
+									>
 										<Select.Trigger class="w-full">
 											<span class="flex items-center gap-2">
 												{refreshRate} Hz
@@ -125,13 +157,30 @@
 							<p class="mt-1 text-xs text-muted-foreground">
 								Effective resolution: {Math.round(width / scale)}x{Math.round(height / scale)}
 							</p>
+
+							{#if Math.round(width / scale) !== width / scale || Math.round(height / scale) !== height / scale}
+								<Alert.Root>
+									<TriangleAlert class="h-4 w-4" />
+									<Alert.Title>Not an integer divisor!</Alert.Title>
+									<Alert.Description>
+										This scale factor will result in a non-integer resolution. This may cause visual
+										artifacts. You will also have to set <code
+											>debug:disable_scale_checks = true</code
+										> in your Hyprland config.
+									</Alert.Description>
+								</Alert.Root>
+							{/if}
 						</div>
 
 						<div>
 							<div class="grid grid-cols-2 gap-6">
 								<div class="space-y-2">
 									<Label class="text-sm font-medium">Rotation</Label>
-									<Select.Root type="single" value={transformRotation.toString()}>
+									<Select.Root
+										type="single"
+										value={transformRotation.toString()}
+										onValueChange={(r) => (transformRotation = parseInt(r))}
+									>
 										<Select.Trigger class="w-full">
 											<span class="flex items-center gap-2">
 												{transformLabels[transformRotation]}
@@ -148,7 +197,10 @@
 								<div class="space-y-2">
 									<Label class="text-sm font-medium">Flip Display</Label>
 									<div class="flex h-10 items-center space-x-2 rounded-md py-3">
-										<Switch checked={transformFlip === 0b100} />
+										<Switch
+											checked={transformFlip === 0b100}
+											onCheckedChange={(c) => (transformFlip = c ? 0b100 : 0)}
+										/>
 										<span class="text-sm text-muted-foreground">
 											{transformFlip === 0b100 ? 'Flipped' : 'Normal'}
 										</span>
@@ -210,8 +262,8 @@
 		</Tabs.Root>
 
 		<div class="mt-6 flex justify-end gap-3">
-			<Button variant="outline" class="min-w-[100px] gap-2">Cancel</Button>
-			<Button variant="default" class="min-w-[100px] gap-2">Apply Changes</Button>
+			<Button variant="outline" onclick={revertChanges}>Cancel</Button>
+			<Button variant="default" onclick={applyChanges}>Apply Changes</Button>
 		</div>
 	</div>
 </div>

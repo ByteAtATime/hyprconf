@@ -7,11 +7,12 @@
 	let monitors = $state<Monitor[]>();
 	let selectedMonitor = $state<Monitor | undefined>();
 
-	Command.create('hyprctl', ['monitors', '-j'])
-		.execute()
-		.then((res) => {
-			monitors = monitorSchema.array().parse(JSON.parse(res.stdout));
-		});
+	const updateMonitors = async () => {
+		const monitorData = await Command.create('hyprctl', ['monitors', '-j']).execute();
+		monitors = monitorSchema.array().parse(JSON.parse(monitorData.stdout));
+	};
+
+	updateMonitors();
 </script>
 
 <main class="mx-auto max-w-screen-md px-4">
@@ -21,7 +22,7 @@
 
 	{#if selectedMonitor}
 		{#key selectedMonitor.id}
-			<MonitorOptions monitor={selectedMonitor} />
+			<MonitorOptions monitor={selectedMonitor} {updateMonitors} />
 		{/key}
 	{:else}
 		<p class="text-center text-gray-500">Select a monitor to view options</p>
